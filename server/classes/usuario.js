@@ -1,5 +1,5 @@
 class Usuario{
-
+   
     constructor(){
         this.personas = []
     }
