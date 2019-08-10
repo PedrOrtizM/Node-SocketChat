@@ -7,18 +7,52 @@ class Usuario{
 
     agregarPersona(id, nombre, sala){
 
-        let persona = { id , nombre , sala }
-        this.personas.push(persona);
-        return this.personas;
+        if(!this.getPersonaByEmail(nombre)){
+
+            let persona = { id:[id] , nombre , sala }
+            this.personas.push(persona);
+          
+            console.log(' nuevo client id', nombre)
+            return this.personas;
+
+        }else{
+            let oldPerson = this.getPersonaByEmail(nombre)
+            
+            oldPerson.id.push(id)
+            console.log('Asociando nuevo client id   ', nombre)
+            console.log('Asociando nuevo client id   ', nombre)
+            
+
+        }
+
+        
+  
 
     }
 
     getPersona(id){
         // la funcion filter regresa un arreglo
+
+        for (let i = 0; i < this.personas.length; i++) {
+            
+             for (let j = 0; j < this.personas[i].id.length; j++) {
+
+                if(this.personas[i].id[j] === id ){
+
+                    return this.personas[i];
+                }   
+             }   
+        }
+        return null;
+    }
+
+    getPersonaByEmail(email){
         let persona = this.personas.filter( persona =>{
-            return persona.id === id
+            return persona.nombre === email
 
         })[0];
+        
+        
         return persona;
     }
     getPersonas(){

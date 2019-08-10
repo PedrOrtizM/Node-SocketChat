@@ -22,11 +22,13 @@ io.on('connection', (client) => {
             });
         }
         
+    
         client.join( data.sala );
-        
-
+    
+    
         // cuandos se agrega una persona retorna un arreglo con todo
         usuarios.agregarPersona( client.id , data.nombre , data.sala);
+        console.log(usuarios.getPersonaByEmail(data.nombre));
         
         // cuando un usuario se agrega emitimos a todos los que estan conectados
         client.broadcast.to(data.sala).emit('Conectados',usuarios.getPersonaPorSala(data.sala))
@@ -39,11 +41,12 @@ io.on('connection', (client) => {
     });
 
     client.on('Mensaje', (data,callback)=>{
-        console.log("entro al mensaje");
         console.log(client.id);
-        console.log(data);
+        console.log(data,"aaaaa");
         
         let persona = usuarios.getPersona(client.id);
+        console.log(persona,"personaa");
+        
         let mensaje = crearMensaje (persona.nombre,data.mensaje);
         client.broadcast.to(persona.sala).emit( 'Mensaje' , mensaje );
         return callback(mensaje);
@@ -54,10 +57,13 @@ io.on('connection', (client) => {
 
     client.on('disconnect', ()=>{
         let personaBorrada = usuarios.borrarPersona(client.id);
-
+        console.log(personaBorrada,"desconectada");
+        
         // la funcion crear mensaje está definida en utlidades
-        client.broadcast.to(personaBorrada.sala).emit( 'Mensaje' , crearMensaje('Administrador',personaBorrada.nombre+" salió"));
-        client.broadcast.to(personaBorrada.sala).emit('Conectados',usuarios.getPersonaPorSala(personaBorrada.sala))
+        if(personaBorrada){
+            client.broadcast.to(personaBorrada.sala).emit( 'Mensaje' , crearMensaje('Administrador',personaBorrada.nombre+" salió"));
+            client.broadcast.to(personaBorrada.sala).emit('Conectados',usuarios.getPersonaPorSala(personaBorrada.sala))
+        }
     })
 
 
