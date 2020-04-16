@@ -1,77 +1,109 @@
 const { io } = require('../server');
-const { Usuario } = require('../classes/usuario');
-const { crearMensaje } = require('../utils/utilidades')
-
-const usuarios = new Usuario();
+const { User } = require('../classes/user');
+const users = new User();
 
 // establecer conexion con los clientes
 io.on('connection', (client) => {
 
-    console.log('Usuario conectado');
+    client.on('initSocket', ( person, callback) => {
+    
 
-
-    client.on('iniciarChat',(data , callback )=>{
-        
-        console.log(data.sala,data.nombre);
-        
-        
-        if( ! data.nombre || !data.sala ){
+        if (!person.email || !person.room) {
             return callback({
                 error: true,
-                mensaje: 'El nombre y la sala son necesarios'
+                mensaje: 'El email y la sala son necesarios'
             });
         }
-        
-    
-        client.join( data.sala );
-    
-    
-        // cuandos se agrega una persona retorna un arreglo con todo
-        usuarios.agregarPersona( client.id , data.nombre , data.sala);
-        console.log(usuarios.getPersonaByEmail(data.nombre));
-        
-        // cuando un usuario se agrega emitimos a todos los que estan conectados
-        client.broadcast.to(data.sala).emit('Conectados',usuarios.getPersonaPorSala(data.sala))
-        
-        // Cuando se une 
-        client.broadcast.to(data.sala).emit( 'Mensaje' , crearMensaje('Administrador',data.nombre+" se unió"));
 
-        callback( usuarios.getPersonaPorSala( data.sala ) );
+        client.join(person.room);
+
+
+        // cuandos se agrega una persona retorna un arreglo con todo
+        users.addPerson(client.id, person);
+
+        // cuando un usuario se agrega emitimos a todos los que estan conectados
+        client.broadcast.to(person.room).emit('usersOnline', users.getPersonsByRoom(person.room))
+
+        // Cuando se une 
+        let messageAdmin = { 
+            admin: true,
+            message: person.nombre + ' Se unió al chat',
+            room: person.room
+        }
+        client.broadcast.to(person.room).emit('message',messageAdmin);
+
+        callback(users.getPersonsByRoom(person.room));
 
     });
 
-    client.on('Mensaje', (data,callback)=>{
-        console.log(client.id);
-        console.log(data,"aaaaa");
-        
-        let persona = usuarios.getPersona(client.id);
-        console.log(persona,"personaa");
-        
-        let mensaje = crearMensaje (persona.nombre,data.mensaje);
-        client.broadcast.to(persona.sala).emit( 'Mensaje' , mensaje );
-        return callback(mensaje);
+    client.on('message', (request, callback) => {
+        let person = users.getPerson(client.id, request.room);
+        let message = {
+           person,
+           ...request 
+        }
+
+        client.broadcast.to(person.room).emit('message', message);
+        // -- LOG
+        console.log('------------ | NEW MESSAGE  | ----------------');
+        console.log('SALA     ' + request.room);
+        console.log('PERSONA: ', person);
+        console.log('MENSAJE', message);
+        console.log('---------------------------------------------');
+        // --
+        return callback(message);
     })
 
 
 
 
-    client.on('disconnect', ()=>{
-        let personaBorrada = usuarios.borrarPersona(client.id);
-        console.log(personaBorrada,"desconectada");
+    client.on('disconnect', () => {
         
-        // la funcion crear mensaje está definida en utlidades
-        if(personaBorrada){
-            client.broadcast.to(personaBorrada.sala).emit( 'Mensaje' , crearMensaje('Administrador',personaBorrada.nombre+" salió"));
-            client.broadcast.to(personaBorrada.sala).emit('Conectados',usuarios.getPersonaPorSala(personaBorrada.sala))
+        
+        let rooms = users.getRoomsOfPerson(client.id);
+        console.log('salas antes');
+        rooms.forEach(element => {
+            console.log(users.getPersonsByRoom(element));
+        });
+
+        let personDeleted = users.deletePerson(client.id);
+
+        console.log('------------ | ON disconnet  | ----------------');
+        console.log('SALAS    ', rooms);
+        console.log('PERSONA  ', personDeleted);
+        console.log('------------------------------------------------');
+
+        if (personDeleted) {
+            rooms.forEach(room => {
+                let messageAdmin = { 
+                    admin: true,
+                    message: personDeleted.nombre + ' Salió del Chat',
+                    room
+                }
+                console.log('***salas despues**********');
+                console.log(    users.getPersonsByRoom(room));
+                console.log('*************');
+
+                client.broadcast.to(room).emit('message', messageAdmin);
+                client.broadcast.to(room).emit('usersOnline', users.getPersonsByRoom(room))
+            });
         }
     })
 
 
     //mensaje privado
 
-    client.on('mensajePrivado', data => {
-        let persona = usuarios.getPersona(client.id);
-        client.broadcast.to(data.para).emit( 'mensajePrivado' , crearMensaje(persona.nombre,data.mensaje) );
+    client.on('privateMessage', (request, callback) => {
+        let person = users.getPersonById(client.id);
+        console.log('persona encontrada',person);
+        
+        let message = {
+            person,
+            ...request 
+         }
+
+        client.broadcast.to(request.to).emit('privateMessage', message);
+        return callback(message);
     })
 
 });
