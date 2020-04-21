@@ -29,10 +29,12 @@ class User {
     getPerson(id, room) {
         console.log('id',id);
         console.log('room',room);
-        
-        for (let i = 0; i < this.persons.get(room).length; i++) {
-            if (this.persons.get(room)[i].id === id) {
-                return this.persons.get(room)[i];
+        if(this.persons.get(room)){
+
+            for (let i = 0; i < this.persons.get(room).length; i++) {
+                if (this.persons.get(room)[i].id === id) {
+                    return this.persons.get(room)[i];
+                }
             }
         }
         return null;
@@ -58,7 +60,7 @@ class User {
 
 
     getPersonsByRoom(room) {
-        return this.persons.get(room);
+        return { room, persons: this.persons.get(room)};
     }
 
     deletePerson(id) {

@@ -27,8 +27,9 @@ io.on('connection', (client) => {
         // Cuando se une 
         let messageAdmin = { 
             admin: true,
-            message: person.nombre + ' Se unió al chat',
-            room: person.room
+            message: person.nombre + ' se unió al chat',
+            room: person.room,
+            date: new Date(Date.now())
         }
         client.broadcast.to(person.room).emit('message',messageAdmin);
 
@@ -38,20 +39,25 @@ io.on('connection', (client) => {
 
     client.on('message', (request, callback) => {
         let person = users.getPerson(client.id, request.room);
-        let message = {
-           person,
-           ...request 
-        }
+        if(person){
+            let message = {
+               date: new Date(Date.now()),
+               person,
+               ...request 
+            }
+    
+            client.broadcast.to(person.room).emit('message', message);
+            // -- LOG
+            console.log('------------ | NEW MESSAGE  | ----------------');
+            console.log('SALA     ' + request.room);
+            console.log('PERSONA: ', person);
+            console.log('MENSAJE', message);
+            console.log('---------------------------------------------');
+            // --
+            return callback(message);
 
-        client.broadcast.to(person.room).emit('message', message);
-        // -- LOG
-        console.log('------------ | NEW MESSAGE  | ----------------');
-        console.log('SALA     ' + request.room);
-        console.log('PERSONA: ', person);
-        console.log('MENSAJE', message);
-        console.log('---------------------------------------------');
-        // --
-        return callback(message);
+        }
+        return callback({error: 'ha ocurrido un error'})
     })
 
 
@@ -77,7 +83,7 @@ io.on('connection', (client) => {
             rooms.forEach(room => {
                 let messageAdmin = { 
                     admin: true,
-                    message: personDeleted.nombre + ' Salió del Chat',
+                    message: personDeleted.nombre + ' salió del chat',
                     room
                 }
                 console.log('***salas despues**********');
